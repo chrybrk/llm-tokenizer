@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 	{
 		const char **source_files_array = get_files_with_specific_ext("src/", ".c");
 		const char *source_files = string_list_to_const_string(source_files_array, darray_len(source_files_array), ' ');
-		if (!execute(formate_string("cc -o %s %s -Isrc/ -Wall -Wextra", "bin/main", source_files)))
+		if (!execute(formate_string("cc -o %s %s -Isrc/ -Wall -Wextra -O3", "bin/main", source_files)))
 			ERROR("failed to compile."), exit(1);
 	}
 

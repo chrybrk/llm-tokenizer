@@ -1,0 +1,4 @@
+.ccls-cache/
+bin/
+*.txt
+perf*

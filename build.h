@@ -732,11 +732,11 @@ void *init_hm(void *map, size_t initial_size, size_t item_size, hash_function_t 
 
 void hm_reset(void *KVs)
 {
-	if (KVs != NULL && ((hashmap_t*)__hashmap_get_meta__(KVs))->index) {
-		KVs = __hashmap_get_meta__(KVs);
-		((hashmap_t*)KVs)->index = 0;
-		memset(((hashmap_t*)KVs)->buckets, 0, sizeof(struct bucket) * ((hashmap_t*)KVs)->count);
-	}
+	if (!KVs) return;
+
+	hashmap_t *meta = __hashmap_get_meta__(KVs);
+	meta->index = 0;
+	memset(meta->buckets, 0, sizeof(struct bucket) * meta->count);
 }
 
 void hm_free(void *KVs)
@@ -755,7 +755,7 @@ uint64_t fnv_1a_hash(const void *bytes, size_t size, uint32_t seed)
 {
 	uint64_t h = 14695981039346656037ULL; // FNV-1a hash
 	for (size_t i = 0; i < size; ++i) {
-		h ^= ((unsigned char*)bytes)[i] + seed;
+		h ^= ((unsigned char*)bytes)[i];
 		h *= 1099511628211ULL; // FNV prime
 	}
 	return h;
