@@ -12,6 +12,20 @@ typedef struct {
 	int value;
 } freq_t;
 
+int cmp(const void *a, const void *b, size_t size)
+{
+	uint64_t p = *(uint64_t*)a,
+					 q = *(uint64_t*)b;
+
+	return (p & q) != 0;
+}
+
+uint64_t hash(const void *key, size_t len, uint32_t seed)
+{
+	uint64_t _key = *(uint64_t*)key;
+	return (_key >> seed) | (_key << (len - seed));
+}
+
 int qsort_compare(const void *a, const void *b)
 {
 	return ((freq_t*)a)->value < ((freq_t*)b)->value;
@@ -64,7 +78,7 @@ double get_time(void)
 
 int main(void)
 {
-	const char *text = read_file("input.txt");
+	const char *text = read_file("skspear.txt");
 	const size_t text_size = strlen(text);
 
 	freq_t *freqs = NULL;
@@ -72,7 +86,7 @@ int main(void)
 	uint32_t *tokens_in = NULL;
 	uint32_t *tokens_out = NULL;
 
-	freqs = init_hm(freqs, 4, sizeof(freq_t), fnv_1a_hash, cmp_hash, 5186);
+	freqs = init_hm(freqs, 2, sizeof(freq_t), hash, cmp, 5186);
 	pairs = init_darray(pairs, 4, sizeof(pair_t));
 	tokens_in = init_darray(tokens_in, 4, sizeof(uint32_t));
 	tokens_out = init_darray(tokens_out, 4, sizeof(uint32_t));
@@ -91,7 +105,7 @@ int main(void)
 
 	size_t iteration = 0;
 	size_t total_iteration_dump = 10;
-	size_t max_iteration = 50;
+	size_t max_iteration = 1000;
 
 	double *profile_samples = malloc(max_iteration * sizeof(double));
 	size_t profile_samples_count = 0;
@@ -101,16 +115,9 @@ int main(void)
 		start = get_time();
 
 		if (iteration % total_iteration_dump == 0) {
-			/*
-			printf("tokens_in = %zu\n", darray_len(tokens_in));
-			printf("tokens_out = %zu\n", darray_len(tokens_out));
-			printf("pairs = %zu\n", darray_len(pairs));
-			printf("freqs = %zu\n", hm_len(freqs));
-			*/
-			// report_progress(iteration, tokens_in, pairs, profile_samples, total_iteration_dump);
+			report_progress(iteration, tokens_in, pairs, profile_samples, total_iteration_dump);
 		}
 
-		hm_reset(freqs);
 		for (size_t i = 0; i < darray_len(tokens_in) - 1; ++i)
 		{
 			pair_t pair = {
@@ -204,7 +211,7 @@ int main(void)
 		SWAP(uint32_t *, tokens_in, tokens_out);
 		profile_samples[iteration%total_iteration_dump] = get_time() - start;
 	}
-	// render_tokens(pairs, tokens_out);
+	render_tokens(pairs, tokens_out);
 
 	// free
 	hm_free(freqs);

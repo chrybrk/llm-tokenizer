@@ -61,8 +61,8 @@
 #define WARN(...) printf("%s[BUILD :: WARN]:%s %s\n", get_term_color(TEXT, YELLOW), get_term_color(RESET, 0), formate_string(__VA_ARGS__))
 #define ERROR(...) printf("%s[BUILD :: ERROR]:%s %s\n", get_term_color(TEXT, RED), get_term_color(RESET, 0), formate_string(__VA_ARGS__))
 
-#define LOAD_FACTOR 0.65
-#define POWER_FACTOR 4
+#define LOAD_FACTOR 0.875
+#define POWER_FACTOR 2
 
 #define SWAP(TYPE, A, B) do {\
 	TYPE T = A; \
@@ -82,7 +82,7 @@
 			uint64_t index = hm->hf(&map[bkt.index].key, bkt.size, hm->seed) % hm->count; \
 			uint64_t c = 0; \
 			while (c < hm->count) { \
-				index = (index + c * c) % hm->count; \
+				index = (index + c * c) & (hm->count - 1); \
 				if (!buckets[index].filled) { \
 					buckets[index].size = bkt.size; \
 					buckets[index].index = bkt.index; \
@@ -91,9 +91,6 @@
 				} \
 				c++; \
 			} \
-			buckets[index].size= bkt.size; \
-			buckets[index].index = bkt.index; \
-			buckets[index].filled = 1; \
 		} \
 		map = __hashmap_get_meta__(map); \
 		map = realloc(map, sizeof(hashmap_t) + hm->count * hm->item_size); \
@@ -106,7 +103,7 @@
 	uint64_t index = hm->hf(&KV.key, sizeof(KV.key), hm->seed) % hm->count; \
 	uint64_t c = 0; \
 	while (c < hm->count) { \
-		index = (index + c * c) % hm->count; \
+		index = (index + c * c) & (hm->count - 1); \
 		if ( \
 				sizeof(KV.key) == hm->buckets[index].size && \
 				hm->hc(&KV.key, &map[hm->buckets[index].index].key, sizeof(KV.key)) \
@@ -131,7 +128,7 @@
 	uint64_t c = 0; \
 	while (c < hm->count) \
 	{\
-		index = (index + c * c) % hm->count; \
+		index = (index + c * c) & (hm->count - 1); \
 		if (sizeof(KV->key) == hm->buckets[index].size && hm->hc(&KV->key, &map[hm->buckets[index].index].key, sizeof(KV->key))) {\
 			KV->value = map[hm->buckets[index].index].value; \
 			break; \
@@ -146,13 +143,13 @@
 	uint64_t c = 0; \
 	while (c < hm->count) \
 	{\
-		index = (index + c * c) % hm->count; \
+		index = (index + c * c) & (hm->count - 1); \
 		if (sizeof(KV.key) == hm->buckets[index].size && hm->hc(&KV.key, &map[hm->buckets[index].index].key, sizeof(KV.key))) {\
 			break; \
 		}\
 		c++; \
 	}\
-	(long int)(c >= hm->count ? -1 : (long int)hm->buckets[index].index); \
+	(c >= hm->count ? -1 : (long int)hm->buckets[index].index); \
 })
 
 void *__dynamic_array_resize_array__(void *array);
@@ -732,11 +729,11 @@ void *init_hm(void *map, size_t initial_size, size_t item_size, hash_function_t 
 
 void hm_reset(void *KVs)
 {
-	if (!KVs) return;
-
-	hashmap_t *meta = __hashmap_get_meta__(KVs);
-	meta->index = 0;
-	memset(meta->buckets, 0, sizeof(struct bucket) * meta->count);
+	if (KVs != NULL && ((hashmap_t*)__hashmap_get_meta__(KVs))->index) {
+		KVs = __hashmap_get_meta__(KVs);
+		((hashmap_t*)KVs)->index = 0;
+		memset(((hashmap_t*)KVs)->buckets, 0, sizeof(struct bucket) * ((hashmap_t*)KVs)->count);
+	}
 }
 
 void hm_free(void *KVs)
@@ -755,7 +752,7 @@ uint64_t fnv_1a_hash(const void *bytes, size_t size, uint32_t seed)
 {
 	uint64_t h = 14695981039346656037ULL; // FNV-1a hash
 	for (size_t i = 0; i < size; ++i) {
-		h ^= ((unsigned char*)bytes)[i];
+		h ^= ((unsigned char*)bytes)[i] + seed;
 		h *= 1099511628211ULL; // FNV prime
 	}
 	return h;

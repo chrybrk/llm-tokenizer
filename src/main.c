@@ -12,6 +12,20 @@ typedef struct {
 	int value;
 } freq_t;
 
+int cmp(const void *a, const void *b, size_t size)
+{
+	uint64_t p = *(uint64_t*)a,
+					 q = *(uint64_t*)b;
+
+	return (p & q) != 0;
+}
+
+uint64_t hash(const void *key, size_t len, uint32_t seed)
+{
+	uint64_t _key = *(uint64_t*)key;
+	return (_key >> seed) | (_key << (len - seed));
+}
+
 int qsort_compare(const void *a, const void *b)
 {
 	return ((freq_t*)a)->value < ((freq_t*)b)->value;
@@ -72,7 +86,7 @@ int main(void)
 	uint32_t *tokens_in = NULL;
 	uint32_t *tokens_out = NULL;
 
-	freqs = init_hm(freqs, 4, sizeof(freq_t), fnv_1a_hash, cmp_hash, 5186);
+	freqs = init_hm(freqs, 2, sizeof(freq_t), hash, cmp, 5186);
 	pairs = init_darray(pairs, 4, sizeof(pair_t));
 	tokens_in = init_darray(tokens_in, 4, sizeof(uint32_t));
 	tokens_out = init_darray(tokens_out, 4, sizeof(uint32_t));
